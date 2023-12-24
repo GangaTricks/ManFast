@@ -56,7 +56,7 @@
         }
         #tray-container {
             position: fixed;
-            top: 50%;
+            top: 30%;
             right: 0;
             transform: translate(100%, -50%);
             transition: transform 0.3s ease-in-out;
@@ -93,8 +93,9 @@
         }
         #toggle-tray-button {
             position: fixed;
-            top: 50%;
-            right: 0;
+            top: 30%;
+            right: 06px;
+	height: 150px;
             transform: translate(100%, -50%);
             background-color: #4caf50;
             color: #fff;
@@ -217,50 +218,68 @@
         updateTray();
     }
 
-    function checkAnswer() {
-        var selectedOption = document.querySelector('input[name="option"]:checked');
-        if (!selectedOption) {
-            alert("Please select an option");
-            return;
-        }
-
-        var currentQuestion = quizTopics[currentTopic][currentQuestionIndex];
-        var correctOption = currentQuestion.correctOption;
-
-        if (parseInt(selectedOption.value) === correctOption) {
-            alert("Correct!");
-        } else {
-            alert("Incorrect. The correct answer is: " + currentQuestion.options[correctOption]);
-        }
-
-        clearInterval(countdown);
-        var endTime = new Date();
-        var timeTaken = (endTime - startTime) / 1000; // Time taken in seconds
-        timeTakenForEachQuestion[currentQuestionIndex] = timeTaken;
-
-        // Update tray highlighting
-        updateTray();
+ function checkAnswer() {
+    var selectedOption = document.querySelector('input[name="option"]:checked');
+    if (!selectedOption) {
+        alert("Please select an option");
+        return;
     }
 
-    function nextQuestion() {
-        checkAnswer();
-        currentQuestionIndex++;
+    var currentQuestion = quizTopics[currentTopic][currentQuestionIndex];
+    var correctOption = currentQuestion.correctOption;
 
-        if (currentQuestionIndex < quizTopics[currentTopic].length) {
-            displayQuestion(currentQuestionIndex);
-        } else {
-            alert("Quiz completed for the selected topic!");
-        }
-    }
+    var optionsContainer = document.getElementById('options-container');
+    var options = optionsContainer.querySelectorAll('input[name="option"]');
+    options.forEach(function (option, index) {
+        var label = option.nextElementSibling;
 
-    function previousQuestion() {
-        if (currentQuestionIndex > 0) {
-            currentQuestionIndex--;
-            displayQuestion(currentQuestionIndex);
-        } else {
-            alert("This is the first question.");
+        if (index === correctOption) {
+            label.style.backgroundColor = '#4caf50'; // Highlight correct option in green
         }
+
+        if (index === parseInt(selectedOption.value)) {
+            if (index === correctOption) {
+                // If selected option is correct, no need to change the background color
+            } else {
+                label.style.backgroundColor = '#ff0000'; // Highlight incorrect option in red
+            }
+        }
+
+        option.disabled = true; // Disable options after checking the answer
+    });
+
+    clearInterval(countdown);
+    var endTime = new Date();
+    var timeTaken = (endTime - startTime) / 1000; // Time taken in seconds
+    timeTakenForEachQuestion[currentQuestionIndex] = timeTaken;
+
+    // Update tray highlighting
+    updateTray();
+}
+
+
+
+function nextQuestion() {
+    checkAnswer();
+    currentQuestionIndex++;
+
+    if (currentQuestionIndex < quizTopics[currentTopic].length) {
+        displayQuestion(currentQuestionIndex);
+    } else {
+        // No need for the alert here
     }
+}
+
+
+function previousQuestion() {
+    if (currentQuestionIndex > 0) {
+        currentQuestionIndex--;
+        displayQuestion(currentQuestionIndex);
+    } else {
+        // No need for the alert here
+    }
+}
+
 
     function changeTopic() {
         currentTopic = document.getElementById('topic').value;
