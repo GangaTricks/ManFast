@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz with Timer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            margin: 0;
+            background-color: #f8f8f8;
+            overflow: hidden;
+        }
+        #quiz-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-width: 800px;
+            margin: 20px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        #question-container {
+            text-align: left;
+            margin-bottom: 20px;
+            flex: 1;
+        }
+        #options-container {
+            margin-top: 20px;
+            text-align: left;
+        }
+        #timer {
+            font-size: 20px;
+            margin-top: 20px;
+        }
+        button {
+            background-color: #4caf50;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        select {
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        #tray-container {
+            position: fixed;
+            top: 50%;
+            right: 0;
+            transform: translate(100%, -50%);
+            transition: transform 0.3s ease-in-out;
+        }
+        #tray {
+            padding: 20px;
+            background-color: #4caf50;
+            color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            overflow-y: auto;
+            max-height: 80vh;
+            display: none;
+        }
+        #tray-title {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+        .question-list {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+        }
+        .question-list-item {
+            cursor: pointer;
+            padding: 5px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .question-list-item.active {
+            background-color: #4caf50;
+            color: #fff;
+        }
+        #toggle-tray-button {
+            position: fixed;
+            top: 50%;
+            right: 0;
+            transform: translate(100%, -50%);
+            background-color: #4caf50;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div id="quiz-container">
+    <div id="question-container"></div>
+    <div id="options-container"></div>
+    
+    <div id="timer">Time remaining: <span id="countdown">60</span> seconds</div>
+    <button onclick="checkAnswer()">Check Answer</button>
+    <button onclick="previousQuestion()">Previous Question</button>
+    <button onclick="nextQuestion()">Next Question</button>
+    <button onclick="submitQuiz()">Submit</button>
+</div>
+
+<div id="tray-container">
+    <div id="tray">
+        <div id="tray-title">Questions</div>
+        <select id="topic" onchange="changeTopic()">
+            <option value="all">Select Topic</option>
+            <option value="geography">Geography</option>
+            <option value="science">Science</option>
+            <!-- Add more topics as needed -->
+        </select>
+        <div class="question-list" id="tray-questions"></div>
+    </div>
+</div>
+
+<button id="toggle-tray-button" onclick="toggleTray()">Toggle Tray</button>
+
+<script>
+    var quizTopics = {
+        "geography": [
+            {
+                "question": "What is the capital of France?",
+                "options": ["Berlin", "Madrid", "Paris", "Rome"],
+                "correctOption": 2
+            },
+            {
+                "question": "Which river is the longest in the world?",
+                "options": ["Nile", "Amazon", "Yangtze", "Mississippi"],
+                "correctOption": 0
+            },
+            // Add more geography questions
+        ],
+        "science": [
+            {
+                "question": "Which planet is known as the Red Planet?",
+                "options": ["Earth", "Mars", "Venus", "Jupiter"],
+                "correctOption": 1
+            },
+            {
+                "question": "What is the chemical symbol for water?",
+                "options": ["H2O", "CO2", "O2", "NaCl"],
+                "correctOption": 0
+            },
+            // Add more science questions
+        ],
+        // Add more topics and questions as needed
+    };
+
+    var currentTopic = "all";
+    var currentQuestionIndex = 0;
+    var countdownElement = document.getElementById('countdown');
+    var countdown;
+    var startTime;
+    var timeTakenForEachQuestion = [];
+    var trayContainer = document.getElementById('tray-container');
+    var trayQuestionsContainer = document.getElementById('tray-questions');
+
+    function startTimer() {
+        var seconds = 60;
+        countdown = setInterval(function () {
+            seconds--;
+            countdownElement.textContent = seconds;
+
+            if (seconds <= 0) {
+                clearInterval(countdown);
+                nextQuestion();
+            }
+        }, 1000);
+    }
+
+    function displayQuestion(questionIndex) {
+        var questionContainer = document.getElementById('question-container');
+        var optionsContainer = document.getElementById('options-container');
+        var currentQuestion = quizTopics[currentTopic][questionIndex];
+
+        questionContainer.innerHTML = "<h2>" + currentQuestion.question + "</h2>";
+
+        optionsContainer.innerHTML = "";
+        currentQuestion.options.forEach(function (option, index) {
+            var radioBtn = document.createElement('input');
+            radioBtn.type = 'radio';
+            radioBtn.name = 'option';
+            radioBtn.value = index;
+            optionsContainer.appendChild(radioBtn);
+
+            var optionLabel = document.createElement('label');
+            optionLabel.textContent = option;
+            optionsContainer.appendChild(optionLabel);
+
+            optionsContainer.appendChild(document.createElement('br'));
+        });
+
+        startTimer();
+        startTime = new Date();
+
+        // Update tray highlighting
+        updateTray();
+    }
+
+    function checkAnswer() {
+        var selectedOption = document.querySelector('input[name="option"]:checked');
+        if (!selectedOption) {
+            alert("Please select an option");
+            return;
+        }
+
+        var currentQuestion = quizTopics[currentTopic][currentQuestionIndex];
+        var correctOption = currentQuestion.correctOption;
+
+        if (parseInt(selectedOption.value) === correctOption) {
+            alert("Correct!");
+        } else {
+            alert("Incorrect. The correct answer is: " + currentQuestion.options[correctOption]);
+        }
+
+        clearInterval(countdown);
+        var endTime = new Date();
+        var timeTaken = (endTime - startTime) / 1000; // Time taken in seconds
+        timeTakenForEachQuestion[currentQuestionIndex] = timeTaken;
+
+        // Update tray highlighting
+        updateTray();
+    }
+
+    function nextQuestion() {
+        checkAnswer();
+        currentQuestionIndex++;
+
+        if (currentQuestionIndex < quizTopics[currentTopic].length) {
+            displayQuestion(currentQuestionIndex);
+        } else {
+            alert("Quiz completed for the selected topic!");
+        }
+    }
+
+    function previousQuestion() {
+        if (currentQuestionIndex > 0) {
+            currentQuestionIndex--;
+            displayQuestion(currentQuestionIndex);
+        } else {
+            alert("This is the first question.");
+        }
+    }
+
+    function changeTopic() {
+        currentTopic = document.getElementById('topic').value;
+        currentQuestionIndex = 0;
+        displayQuestion(currentQuestionIndex);
+    }
+
+    function submitQuiz() {
+        clearInterval(countdown);
+
+        // Calculate and display the total time taken to complete the quiz in a new window
+        var totalTimeTaken = timeTakenForEachQuestion.reduce(function (total, time) {
+            return total + time;
+        }, 0);
+
+        var resultWindow = window.open('', '_blank');
+        resultWindow.document.write("<html lang='en'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1.0'><title>Quiz Result</title><style>body {font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;text-align: center;margin: 20px;background-color: #f8f8f8;}#result-container {max-width: 80%;margin: 0 auto;background-color: #fff;padding: 20px;border-radius: 10px;box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);}ul {list-style: none;padding: 0;}li {margin-bottom: 10px;}h2 {margin-bottom: 20px;}</style></head><body><div id='result-container'><h2>Quiz Completed</h2><p>Total time taken: " + totalTimeTaken + " seconds</p><p>Time taken for each question:</p><ul>");
+
+        timeTakenForEachQuestion.forEach(function (time, index) {
+            resultWindow.document.write("<li>Question " + (index + 1) + ": " + time + " seconds</li>");
+        });
+
+        resultWindow.document.write("</ul></div></body></html>");
+    }
+
+    function updateTray() {
+        // Update the tray with question list
+        trayQuestionsContainer.innerHTML = "";
+        quizTopics[currentTopic].forEach(function (question, index) {
+            var listItem = document.createElement('div');
+            listItem.classList.add('question-list-item');
+            listItem.textContent = "Q" + (index + 1);
+            listItem.addEventListener('click', function () {
+                currentQuestionIndex = index;
+                displayQuestion(currentQuestionIndex);
+            });
+
+            if (index === currentQuestionIndex) {
+                listItem.classList.add('active');
+            }
+
+            trayQuestionsContainer.appendChild(listItem);
+        });
+    }
+
+    function toggleTray() {
+        var tray = document.getElementById('tray');
+        var trayContainer = document.getElementById('tray-container');
+        var toggleButton = document.getElementById('toggle-tray-button');
+
+        if (tray.style.display === 'none') {
+            tray.style.display = 'block';
+            trayContainer.style.transform = 'translate(0, -50%)';
+            toggleButton.textContent = 'Hide Tray';
+        } else {
+            tray.style.display = 'none';
+            trayContainer.style.transform = 'translate(100%, -50%)';
+            toggleButton.textContent = 'Show Tray';
+        }
+    }
+
+    // Initial display
+    displayQuestion(currentQuestionIndex);
+    updateTray();
+
+
+
+
+
+</script>
+
+<script>
+    document.addEventListener('click', function (event) {
+        var trayContainer = document.getElementById('tray-container');
+        var tray = document.getElementById('tray');
+        var toggleButton = document.getElementById('toggle-tray-button');
+
+        if (event.target !== toggleButton && !tray.contains(event.target) && !toggleButton.contains(event.target)) {
+            tray.style.display = 'none';
+            trayContainer.style.transform = 'translate(100%, -50%)';
+            toggleButton.textContent = 'Show Tray';
+        }
+    });
+</script>
+
+
+
+
+
+
+
+
+
+</body>
+</html>
